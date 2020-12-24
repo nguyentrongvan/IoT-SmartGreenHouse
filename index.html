@@ -1,0 +1,31 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT - Internet of Things</title>
+</head>
+<body>
+    <div id="content"></div>
+    <form action="#" id="form">
+        <input type="text" name="msg" id="msg">
+        <button type="submit">Send</button>
+    </form>
+    <script>
+        const ws = new WebSocket("ws://localhost:8999");
+        ws.onmessage = event => {
+            const text = document.createElement('div');
+            text.textContent = event.data;
+            content.appendChild(text);
+
+            if (content.children.length > 10)
+                content.removeChild(content.children[0]);            
+        }        
+
+        form.addEventListener('submit', e => {
+            e.preventDefault();
+            ws.send(msg.value);
+            msg.value = '';
+        })
+    </script>
+</body>
+</html>
