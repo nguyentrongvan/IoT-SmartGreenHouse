@@ -5,26 +5,48 @@ import asyncio
 import websockets
 import json
 import threading
-import datetime
+import time
 import queue
+import json
 
 dataQueue = queue.Queue(maxsize=10)
+cmd = None
 
-def readingThread():
-    global is_reading
-    is_reading = True
+def serialThread():
+    global is_running
+    global cmd
+    is_running = True
     with serial.Serial('/dev/ttyUSB0', 9600, timeout=1) as ser:
-        while is_reading:
+        while is_running:
             line = ser.readline()
             update_data(line.strip())
+            if cmd is not None:
+                if not cmd.endswith('\n'):
+                    cmd += '\n'
+
+                ser.write(str.encode(cmd))
+                cmd = None
 
 def update_data(s):
     if dataQueue.full():
         dataQueue.get()
 
-    dataQueue.put_nowait("Recv: {} at {}".format(s, datetime.datetime.now()))
+    try:
+        ss = s.decode('utf-8').split('-')
+        if len(ss) != 2: 
+            return
+    except:
+        return
+
+    data = {
+        "temp": int(ss[0]),
+        "mois": int(ss[1]),
+        "time": int(time.time()), 
+    }
+    dataQueue.put_nowait(json.dumps(data))
 
 async def server(websocket, path):
+    global cmd
     while True:
         try:
             data = dataQueue.get(timeout=0.1)
@@ -34,12 +56,12 @@ async def server(websocket, path):
 
         try:
             clientData = await asyncio.wait_for(websocket.recv(), timeout=0.1)
-            print("Recv: {}".format(clientData))
+            cmd = clientData
         except:
             pass
 
 start_server = websockets.serve(server, "localhost", 8999)
 
-threading.Thread(target=readingThread).start()
+threading.Thread(target=serialThread).start()
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
