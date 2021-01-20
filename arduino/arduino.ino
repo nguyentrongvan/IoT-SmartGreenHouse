@@ -1,5 +1,6 @@
 int dl=400;
-String command;
+bool lightOn = false;
+bool fanOn = false;
 
 void setup() { 
   Serial.begin(9600);  
@@ -25,22 +26,23 @@ void loop() {
   Serial.print(vd4);
   Serial.print("|");
   Serial.print(vd5);
-  Serial.println();
+  Serial.print("|");
+  Serial.print(lightOn ? "true" : "false");
+  Serial.print("|");
+  Serial.print(fanOn ? "true" : "false");
+  Serial.println();  
+
+  digitalWrite(D6, fanOn ? LOW : HIGH);
+  digitalWrite(D7, lightOn ? HIGH : LOW);
 
   if (Serial.available()) {
-    command = Serial.readStringUntil('\n');
+    String command = Serial.readStringUntil('\n');
     if (command.endsWith("fan")) {
-      if (!command.startsWith("r"))
-        digitalWrite(D6, HIGH);
-      else
-        digitalWrite(D6, LOW);
+      fanOn = command.startsWith("r");
     }
 
     if (command.endsWith("light")) {
-      if (!command.startsWith("r"))
-        digitalWrite(D7, HIGH);
-      else
-        digitalWrite(D7, LOW);
+      lightOn = command.startsWith("r");
     }
   }
   

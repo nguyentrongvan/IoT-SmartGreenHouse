@@ -19,12 +19,24 @@
         form {
             text-align: center;
         }
+
+        #status {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-evenly;
+            font-size: 18px;
+        }
     </style>
 </head>
 
 <body>
     <div id="content">
         <canvas id="canvas"></canvas>
+        <div id="status">
+            <span>Light: <b id="lightStatus">On</b></span>
+            <span>Fan: <b id="fanStatus">On</b></span>
+            <span>Auto: <b id="autoStatus">On</b></span>
+        </div>
         <form action="#" id="form">
             <label for="msg">Command:</label>
             <input type="text" name="msg" id="msg">
@@ -36,26 +48,32 @@
     <script type="text/javascript" src="/chartjs-plugin-streaming.js"></script>
     <script>
         const ws = new WebSocket("{{WEBSOCKET_PATH}}");
-        
+
         ws.onmessage = event => {
             let data = JSON.parse(event.data);
-            if (!Array.isArray(data)) data = [ data ];
+            if (!Array.isArray(data)) data = [data];
             // console.log(data);
-                
+
             const dsTemperature = chart.config.data.datasets[0];
             const dsMoisture = chart.config.data.datasets[1];
+            const latestData = data[data.length - 1];
 
-            data.forEach(data => {
+            data.forEach(d => {
                 dsTemperature.data.push({
-                    x: data.time,
-                    y: data.temp,
+                    x: d.time,
+                    y: d.temp,
                 });
 
                 dsMoisture.data.push({
-                    x: data.time,
-                    y: data.mois,
+                    x: d.time,
+                    y: d.mois,
                 });
             });
+
+            // console.log(latestData);
+            lightStatus.textContent = latestData.light ? "On" : "Off";
+            fanStatus.textContent = latestData.fan ? "On" : "Off";
+            autoStatus.textContent = latestData.auto ? "On" : "Off";
 
             chart.update();
         }

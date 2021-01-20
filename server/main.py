@@ -18,14 +18,16 @@ data_backlog = []
 active_data_queue = queue.Queue(maxsize=MAX_QUEUE_SIZE)
 command_queue = queue.Queue(maxsize=MAX_QUEUE_SIZE)
 clients = set()
+is_auto = True
 
 def serial_thread():
     global is_running
+    global is_auto
 
     is_running = True
     # while True:
     #     time.sleep(1)
-    #     update_data('{}|{}'.format(random.randrange(25, 35), random.randrange(400, 600)).encode('utf-8'))
+    #     update_data('{}|{}|true|true'.format(random.randrange(25, 35), random.randrange(400, 600)).encode('utf-8'))
 
     with serial.Serial(SERIAL_PATH, 9600, timeout=1) as ser:
         reader = ReadLine(ser)        
@@ -34,14 +36,22 @@ def serial_thread():
             if line is not None:
                 update_data(line.strip())
 
-            command = command_queue.get_nowait()
-            if command is not None:
-                ser.write(str.encode(command))
+            try:
+                command = command_queue.get_nowait()
+
+                if command.endswith('auto\n'):
+                    is_auto = command.startswith('r')
+                else:
+                    ser.write(str.encode(command))
+            except queue.Empty:
+                pass
 
 def update_data(s):        
+    global is_auto
+
     try:
         ss = s.decode('utf-8').split('|')
-        if len(ss) != 2: 
+        if len(ss) != 4: 
             return
     except:
         return
@@ -49,8 +59,15 @@ def update_data(s):
     data = {
         "temp": int(ss[0]),
         "mois": int(ss[1]),
-        "time": int(time.time() * 1000), 
+        "light": ss[2].lower() == "true",
+        "fan": ss[3].lower() == "true",
+        "auto": is_auto,
+        "time": int(time.time() * 1000),
     }
+
+    if is_auto:
+        # TODO: implement auto mode
+        pass
 
     if active_data_queue.full():
         add_to_backlog(active_data_queue.get_nowait())
@@ -66,7 +83,6 @@ def add_to_backlog(data):
     mutex.release()
 
 async def ws_server(websocket, path):
-
     mutex.acquire()
     try:
         await websocket.send(json.dumps(data_backlog))
