@@ -1,0 +1,138 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT - Internet of Things</title>
+    <style>
+        canvas {
+            -moz-user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+        }
+
+        #content {
+            width: 75%;
+            margin: auto;
+        }
+
+        form {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="content">
+        <canvas id="canvas"></canvas>
+        <form action="#" id="form">
+            <label for="msg">Command:</label>
+            <input type="text" name="msg" id="msg">
+            <button type="submit">Send</button>
+        </form>
+    </div>
+    <script type="text/javascript" src="/moment.min.js"></script>
+    <script type="text/javascript" src="/chart.min.js"></script>
+    <script type="text/javascript" src="/chartjs-plugin-streaming.js"></script>
+    <script>
+        const ws = new WebSocket("{{WEBSOCKET_PATH}}");
+        
+        ws.onmessage = event => {
+            let data = JSON.parse(event.data);
+            if (!Array.isArray(data)) data = [ data ];
+            // console.log(data);
+                
+            const dsTemperature = chart.config.data.datasets[0];
+            const dsMoisture = chart.config.data.datasets[1];
+
+            data.forEach(data => {
+                dsTemperature.data.push({
+                    x: data.time,
+                    y: data.temp,
+                });
+
+                dsMoisture.data.push({
+                    x: data.time,
+                    y: data.mois,
+                });
+            });
+
+            chart.update();
+        }
+
+        form.addEventListener('submit', e => {
+            e.preventDefault();
+            ws.send(msg.value);
+            msg.value = '';
+        });
+
+        const config = {
+            type: 'line',
+            responsive: true,
+            data: {
+                datasets: [{
+                    label: 'Temperature',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgb(255, 99, 132)',
+                    fill: false,
+                    lineTension: 0,
+                    borderDash: [8, 4],
+                    data: [],
+                    yAxisID: 'y',
+                }, {
+                    label: 'Soil moisture',
+                    backgroundColor: 'rgb(54, 162, 235)',
+                    borderColor: 'rgb(54, 162, 235)',
+                    fill: false,
+                    cubicInterpolationMode: 'monotone',
+                    data: [],
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                title: {
+                    display: true,
+                    text: 'Temperature & Soil Moisture realtime data'
+                },
+                scales: {
+                    xAxes: [{
+                        type: 'realtime',
+                        realtime: {
+                            duration: 1 * 60 * 1000,
+                            delay: 2 * 1000
+                        },
+                    }],
+                    yAxes: [{
+                        id: 'y',
+                        position: 'left',
+                        scaleLabel: {
+                            display: true,
+                            labelString: 'Temperature'
+                        }
+                    },
+                    {
+                        id: 'y1',
+                        position: 'right',
+                        scaleLabel: {
+                            display: true,
+                            labelString: 'Soil Moisture'
+                        }
+                    }]
+                },
+                tooltips: {
+                    mode: 'nearest',
+                    intersect: false
+                },
+                hover: {
+                    mode: 'nearest',
+                    intersect: false
+                }
+            }
+        };
+
+        const ctx = document.getElementById('canvas').getContext('2d');
+        const chart = new Chart(ctx, config);
+    </script>
+</body>
+
+</html>
