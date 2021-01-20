@@ -23,7 +23,7 @@ void loop() {
   int vd4 = analogRead(A0);
   
   Serial.print(vd4);
-  Serial.print(" - ");
+  Serial.print("|");
   Serial.print(vd5);
   Serial.println();
 

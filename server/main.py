@@ -3,17 +3,15 @@
 import serial
 import asyncio
 import websockets
-import http.server
 import socketserver
-import json
 import threading
 import time
 import queue
 import json
-from settings import SERIAL_PATH, WS_PORT, HTTP_PORT, URL_PATH
+from settings import SERIAL_PATH, WS_PORT, HTTP_PORT, URL_PATH, MAX_QUEUE_SIZE
 from web_server import run_web_server
 
-dataQueue = queue.Queue(maxsize=10)
+data_queue = queue.Queue(maxsize=MAX_QUEUE_SIZE)
 command = None
 
 def serial_thread():
@@ -29,11 +27,11 @@ def serial_thread():
                 command = None
 
 def update_data(s):
-    if dataQueue.full():
-        dataQueue.get()
+    if data_queue.full():
+        data_queue.get()
 
     try:
-        ss = s.decode('utf-8').split('-')
+        ss = s.decode('utf-8').split('|')
         if len(ss) != 2: 
             return
     except:
@@ -44,20 +42,20 @@ def update_data(s):
         "mois": int(ss[1]),
         "time": int(time.time()), 
     }
-    dataQueue.put_nowait(json.dumps(data))
+    data_queue.put_nowait(data)
 
 async def ws_server(websocket, path):
     global command
     while True:
         try:
-            data = dataQueue.get(timeout=0.1)
-            await websocket.send(data)
+            data = data_queue.get(timeout=0.1)
+            await websocket.send(json.dumps(data))
         except:
             pass
 
         try:
-            clientData = await asyncio.wait_for(websocket.recv(), timeout=0.1)
-            command = clientData
+            client_data = await asyncio.wait_for(websocket.recv(), timeout=0.1)
+            command = client_data
             if not command.endswith('\n'):
                 command += '\n'
         except:
