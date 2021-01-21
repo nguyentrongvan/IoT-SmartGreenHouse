@@ -4,11 +4,8 @@ from settings import HTTP_PORT, URL_PATH, WS_PORT
 html_content = '404 Not Found'
 
 @get('/')
-def index():
-    # global html_content    
-    # return html_content
-    with open('./client/index.html', 'r') as index_file:
-        return template(index_file.read(), WEBSOCKET_PATH="ws://{}:{}".format(URL_PATH, WS_PORT))
+def index():  
+    return html_content
 
 @get('/<filename:path>')
 def js(filename):
@@ -17,6 +14,6 @@ def js(filename):
 def run_web_server():    
     global html_content
     with open('./client/index.html', 'r') as index_file:
-        html_content = template(index_file.read(), WEBSOCKET_PATH="ws://{}:{}".format(URL_PATH, WS_PORT))
+        html_content = template(index_file.read(), WEBSOCKET_PORT=WS_PORT, server='gevent')
 
     run(host=URL_PATH, port=HTTP_PORT)

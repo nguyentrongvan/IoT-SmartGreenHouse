@@ -47,7 +47,7 @@
     <script type="text/javascript" src="/chart.min.js"></script>
     <script type="text/javascript" src="/chartjs-plugin-streaming.js"></script>
     <script>
-        const ws = new WebSocket("{{WEBSOCKET_PATH}}");
+        const ws = new WebSocket(`ws://${location.hostname}:{{WEBSOCKET_PORT}}`);
 
         ws.onmessage = event => {
             let data = JSON.parse(event.data);
