@@ -26,13 +26,13 @@ def serial_thread():
     global is_auto
 
     is_running = True
-    while True:
-        time.sleep(1)
-        update_data('{}|{}|true|true'.format(random.randrange(25, 35), random.randrange(400, 600)).encode('utf-8'))
-        try:
-            command_queue.get_nowait()
-        except:
-            pass
+    # while True:
+    #     time.sleep(1)
+    #     update_data('{}|{}|true|true'.format(random.randrange(25, 35), random.randrange(400, 600)).encode('utf-8'))
+    #     try:
+    #         command_queue.get_nowait()
+    #     except:
+    #         pass
 
     with serial.Serial(SERIAL_PATH, 9600, timeout=1) as ser:
         reader = ReadLine(ser)        
