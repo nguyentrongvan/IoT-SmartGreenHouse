@@ -14,9 +14,6 @@
         #content {
             width: 75%;
             margin: auto;
-        }
-
-        form {
             text-align: center;
         }
 
@@ -26,11 +23,24 @@
             justify-content: space-evenly;
             font-size: 18px;
         }
+
+        #warn {            
+            margin: auto;
+            padding: 10px;
+            max-width: 500px;
+            border-radius: 10px;
+            border: 2px dotted rgba(255, 73, 73);
+            color: rgba(255, 73, 73);
+            font-size: 20px;            
+        }   
     </style>
 </head>
 
 <body>
     <div id="content">
+        <div id="warn" style="display: block;">
+            <span>WARNING: THÔNG SỐ KHÔNG ỔN ĐỊNH</span>
+        </div>
         <canvas id="canvas"></canvas>
         <div id="status">
             <span>Light: <b id="lightStatus">On</b></span>
@@ -70,10 +80,14 @@
                 });
             });
 
-            // console.log(latestData);
-            lightStatus.textContent = latestData.light ? "On" : "Off";
-            fanStatus.textContent = latestData.fan ? "On" : "Off";
-            autoStatus.textContent = latestData.auto ? "On" : "Off";
+            if (latestData)
+            {
+                // console.log(latestData);
+                lightStatus.textContent = latestData.light ? "On" : "Off";
+                fanStatus.textContent = latestData.fan ? "On" : "Off";
+                autoStatus.textContent = latestData.auto ? "On" : "Off";
+                warn.style.display = latestData.warn ? "block" : "none";
+            }
 
             chart.update();
         }

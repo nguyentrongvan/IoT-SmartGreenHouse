@@ -5,6 +5,8 @@ html_content = '404 Not Found'
 
 @get('/')
 def index():  
+    with open('./client/index.html', 'r') as index_file:
+        html_content = template(index_file.read(), WEBSOCKET_PORT=WS_PORT)
     return html_content
 
 @get('/<filename:path>')
@@ -14,6 +16,6 @@ def js(filename):
 def run_web_server():    
     global html_content
     with open('./client/index.html', 'r') as index_file:
-        html_content = template(index_file.read(), WEBSOCKET_PORT=WS_PORT, server='gevent')
+        html_content = template(index_file.read(), WEBSOCKET_PORT=WS_PORT)
 
-    run(host=URL_PATH, port=HTTP_PORT)
+    run(host=URL_PATH, port=HTTP_PORT, server='auto')

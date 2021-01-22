@@ -10,7 +10,7 @@ import queue
 import json
 import random
 from serial_read_line import ReadLine
-from settings import SERIAL_PATH, WS_PORT, HTTP_PORT, URL_PATH, MAX_QUEUE_SIZE
+from settings import SERIAL_PATH, WS_PORT, HTTP_PORT, URL_PATH, MAX_QUEUE_SIZE, AUTO_SETTINGS
 from web_server import run_web_server
 
 mutex = threading.Lock()
@@ -19,15 +19,20 @@ active_data_queue = queue.Queue(maxsize=MAX_QUEUE_SIZE)
 command_queue = queue.Queue(maxsize=MAX_QUEUE_SIZE)
 clients = set()
 is_auto = True
+unstable_count = 0
 
 def serial_thread():
     global is_running
     global is_auto
 
     is_running = True
-    # while True:
-    #     time.sleep(1)
-    #     update_data('{}|{}|true|true'.format(random.randrange(25, 35), random.randrange(400, 600)).encode('utf-8'))
+    while True:
+        time.sleep(1)
+        update_data('{}|{}|true|true'.format(random.randrange(25, 35), random.randrange(400, 600)).encode('utf-8'))
+        try:
+            command_queue.get_nowait()
+        except:
+            pass
 
     with serial.Serial(SERIAL_PATH, 9600, timeout=1) as ser:
         reader = ReadLine(ser)        
@@ -39,8 +44,11 @@ def serial_thread():
             try:
                 command = command_queue.get_nowait()
 
+                if not command.endswith('\n'):
+                    command += '\n'
+
                 if command.endswith('auto\n'):
-                    is_auto = command.startswith('r')
+                    is_auto = command.startswith('s')                
                 else:
                     ser.write(str.encode(command))
             except queue.Empty:
@@ -48,6 +56,7 @@ def serial_thread():
 
 def update_data(s):        
     global is_auto
+    global unstable_count
 
     try:
         ss = s.decode('utf-8').split('|')
@@ -57,17 +66,45 @@ def update_data(s):
         return
 
     data = {
-        "temp": int(ss[0]),
-        "mois": int(ss[1]),
-        "light": ss[2].lower() == "true",
-        "fan": ss[3].lower() == "true",
-        "auto": is_auto,
-        "time": int(time.time() * 1000),
+        'temp': int(ss[0]),
+        'mois': int(ss[1]),
+        'light': ss[2].lower() == 'true',
+        'fan': ss[3].lower() == 'true',
+        'auto': is_auto,
+        'time': int(time.time() * 1000),
     }
 
+    if (AUTO_SETTINGS['mois'][0] < data['mois'] < AUTO_SETTINGS['mois'][1]) and (AUTO_SETTINGS['temp'][0] < data['temp'] < AUTO_SETTINGS['temp'][1]):
+        unstable_count -= 1
+
     if is_auto:
-        # TODO: implement auto mode
-        pass
+        if  data['temp'] > AUTO_SETTINGS['temp'][1]:
+            unstable_count += 1
+
+            if not data['fan']:
+                command_queue.put_nowait('start fan')
+            if data['light']:
+                command_queue.put_nowait('pause light')
+        elif data['temp'] < AUTO_SETTINGS['temp'][0]:
+            unstable_count += 1
+
+            if data['fan']:
+                command_queue.put_nowait('pause fan')
+            if not data['light']:
+                command_queue.put_nowait('start light')
+        else:
+            if data['fan']:
+                command_queue.put_nowait('pause fan')
+            if data['light']:
+                command_queue.put_nowait('pause light')
+
+    if not (AUTO_SETTINGS['mois'][0] < data['mois'] < AUTO_SETTINGS['mois'][1]):
+        unstable_count += 1
+
+    if unstable_count >= AUTO_SETTINGS['warn']:
+        is_auto = False
+        data['auto'] = False
+        data['warn'] = True
 
     if active_data_queue.full():
         add_to_backlog(active_data_queue.get_nowait())
@@ -105,9 +142,6 @@ async def ws_server(websocket, path):
             try:
                 client_data = await asyncio.wait_for(websocket.recv(), timeout=0.1)
                 command = client_data
-                if not command.endswith('\n'):
-                    command += '\n'
-
                 command_queue.put_nowait(command)
             except (asyncio.TimeoutError, queue.Empty):
                 continue

@@ -38,11 +38,11 @@ void loop() {
   if (Serial.available()) {
     String command = Serial.readStringUntil('\n');
     if (command.endsWith("fan")) {
-      fanOn = command.startsWith("r");
+      fanOn = command.startsWith("s");
     }
 
     if (command.endsWith("light")) {
-      lightOn = command.startsWith("r");
+      lightOn = command.startsWith("s");
     }
   }
   
